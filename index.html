@@ -19,6 +19,178 @@ var ENDPOINT='https://script.google.com/macros/s/AKfycbzz2v03AMHN5W-fP-m_RqprGKf
 function cards(a){return a.map(function(f){return '<article class="card" style="--cardbg:'+(f.bg||'#ffe0ec')+'"><span class="tag">'+(f.tag||'Sabor')+'</span><span class="price">$'+f.price+'</span><div class="photo">'+(f.photo?'<img src="'+f.photo+'">':(f.emoji||'🍩'))+'</div><h3>'+f.name+'</h3><p>'+f.desc+'</p></article>'}).join('')}function render(){var active=data.daily[today()]||[];$('brand').textContent=data.name;$('footerName').textContent=data.name;$('heroText').textContent=data.hero;$('address').textContent=data.address;$('contact').textContent=data.contact;$('todayCards').innerHTML=cards(data.flavors.filter(function(f){return active.indexOf(f.name)>=0}));$('catalogCards').innerHTML=cards(data.flavors);$('announcement').textContent=data.notice.text;$('announcement').classList.toggle('show',data.notice.show&&!!data.notice.text);$('routeLinks').innerHTML=(data.map?'<a href="'+data.map+'" target="_blank">📍 Cómo llegar</a>':'')+(data.whatsapp?'<a href="'+data.whatsapp+'" target="_blank">💬 WhatsApp</a>':'');$('socialLinks').innerHTML=[['Instagram',data.socials.instagram],['Facebook',data.socials.facebook],['TikTok',data.socials.tiktok],['Otra web',data.socials.other]].filter(function(x){return x[1]}).map(function(x){return '<a href="'+x[1]+'" target="_blank">'+x[0]+' ↗</a>'}).join('');renderChoices()}function renderChoices(){$('flavorList').innerHTML=data.flavors.map(function(f,i){return '<div class="flavor"><div>'+(f.photo?'<img src="'+f.photo+'">':(f.emoji||'🍩'))+'</div><div><b>'+f.name+'</b><br><small>$'+f.price+'</small></div><label style="margin:0">Cantidad<input class="qty" data-i="'+i+'" type="number" min="0" value="0"></label><div class="line">$0</div></div>'}).join('');document.querySelectorAll('.qty').forEach(function(x){x.oninput=totals})}function totals(){var u=0,t=0;document.querySelectorAll('.qty').forEach(function(x){var q=Number(x.value)||0,f=data.flavors[Number(x.dataset.i)];u+=q;t+=q*f.price;x.parentElement.parentElement.querySelector('.line').textContent='$'+q*f.price});$('units').textContent=u;$('total').textContent=t}function firstDate(){var n=new Date(),d=new Date(n);d.setHours(0,0,0,0);d.setDate(d.getDate()+(n.getHours()>=19?2:1));while(!valid(d.toISOString().slice(0,10)))d.setDate(d.getDate()+1);return d.toISOString().slice(0,10)}$('pickup').min=firstDate();$('pickup').value=firstDate();$('dateMessage').textContent='Solo martes a sábado.';$('dailyDate').value=today();render();
 $('open').onclick=function(){$('overlay').classList.add('open')};$('close').onclick=function(){$('overlay').classList.remove('open')};$('overlay').onclick=function(e){if(e.target===$('overlay'))$('overlay').classList.remove('open')};$('enter').onclick=function(){var password=$('pass').value.trim();if(password!=='dazzle-admin'){$('loginStatus').textContent='Contraseña incorrecta.';return}$('login').classList.add('hidden');$('editor').classList.remove('hidden');loadEditor();loadDaily()};$('saveChanges').onclick=function(){data.name=$('eName').value||'Dazzle';data.price=Number($('ePrice').value)||12;data.hero=$('eHero').value;data.address=$('eAddress').value;data.map=$('eMap').value;data.contact=$('eContact').value;data.whatsapp=$('eWhatsapp').value;data.socials={instagram:$('eInstagram').value,facebook:$('eFacebook').value,tiktok:$('eTiktok').value,other:$('eOther').value};data.notice={show:$('showNotice').checked,text:$('noticeText').value};document.querySelectorAll('#flavorEditor [data-i]').forEach(function(x){var i=Number(x.dataset.i);data.flavors[i][x.dataset.k]=x.dataset.k==='price'?(Number(x.value)||data.price):x.value});if(save()){render();$('saveStatus').textContent='Cambios guardados ✓';setTimeout(function(){$('saveStatus').textContent=''},3000)}};
 function loadEditor(){$('eName').value=data.name;$('ePrice').value=data.price;$('eHero').value=data.hero;$('eAddress').value=data.address;$('eMap').value=data.map;$('eContact').value=data.contact;$('eWhatsapp').value=data.whatsapp;$('eInstagram').value=data.socials.instagram;$('eFacebook').value=data.socials.facebook;$('eTiktok').value=data.socials.tiktok;$('eOther').value=data.socials.other;$('showNotice').checked=data.notice.show;$('noticeText').value=data.notice.text;renderEditor()}function renderEditor(){$('flavorEditor').innerHTML=data.flavors.map(function(f,i){return '<div class="row"><img src="'+(f.photo||'')+'"><input data-i="'+i+'" data-k="name" value="'+f.name+'"><input data-i="'+i+'" data-k="price" type="number" value="'+f.price+'"><input data-i="'+i+'" data-k="desc" value="'+f.desc+'"><input data-file="'+i+'" type="file" accept="image/*" capture="environment"><button class="del" data-del="'+i+'" type="button">×</button></div>'}).join('');document.querySelectorAll('[data-del]').forEach(function(b){b.onclick=function(){data.flavors.splice(Number(b.dataset.del),1);renderEditor();render()}});document.querySelectorAll('[data-file]').forEach(function(input){input.onchange=function(){var file=input.files[0];if(!file)return;var reader=new FileReader();reader.onload=function(e){data.flavors[Number(input.dataset.file)].photo=e.target.result;save();renderEditor();render()};reader.readAsDataURL(file)}})}function loadDaily(){var date=$('dailyDate').value||today(),active=data.daily[date]||[];$('dailyList').innerHTML=data.flavors.map(function(f){return '<label><input data-day="'+f.name+'" type="checkbox" '+(active.indexOf(f.name)>=0?'checked':'')+'>'+(f.emoji||'🍩')+' '+f.name+'</label>'}).join('');document.querySelectorAll('[data-day]').forEach(function(c){c.onchange=function(){data.daily[date]=Array.from(document.querySelectorAll('[data-day]:checked')).map(function(x){return x.dataset.day});save();render();loadDaily()}})}$('loadDaily').onclick=loadDaily;$('addFlavor').onclick=function(){data.flavors.push({name:'Nueva dona',price:data.price,emoji:'🍩',tag:'Nuevo',desc:'Describe este sabor.',bg:'#ffe0ec',photo:''});renderEditor();render()};
+(function () {
+  function byId(id) {
+    return document.getElementById(id);
+  }
+
+  function encodeOrder(order) {
+    return btoa(unescape(encodeURIComponent(JSON.stringify(order))))
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=+$/g, '');
+  }
+
+  function decodeOrder(value) {
+    try {
+      let base64 = value.replace(/-/g, '+').replace(/_/g, '/');
+      while (base64.length % 4) base64 += '=';
+      return JSON.parse(decodeURIComponent(escape(atob(base64))));
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function escapeHtml(value) {
+    return String(value || '').replace(/[&<>"']/g, function (char) {
+      return {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+      }[char];
+    });
+  }
+
+  function showLinkedOrder() {
+    const encoded = new URLSearchParams(location.search).get('pedido');
+    if (!encoded) return;
+
+    const order = decodeOrder(encoded);
+    if (!order) return;
+
+    let box = byId('qrOrderView');
+    if (!box) {
+      box = document.createElement('section');
+      box.id = 'qrOrderView';
+      box.style.cssText =
+        'margin:24px 8%;padding:24px;background:#fff0f7;border:3px solid #f0448b;border-radius:20px;line-height:1.6';
+      const hero = document.querySelector('.hero');
+      document.body.insertBefore(box, hero || document.body.firstChild);
+    }
+
+    const items = (order.items || []).map(function (item) {
+      return '<li>' + escapeHtml(item.quantity) + ' × ' +
+        escapeHtml(item.name) + ' — $' +
+        escapeHtml(Number(item.quantity) * Number(item.unitPrice)) + '</li>';
+    }).join('');
+
+    box.innerHTML =
+      '<h2>Pedido ' + escapeHtml(order.id) + '</h2>' +
+      '<p><b>Cliente:</b> ' + escapeHtml(order.firstName) + ' ' +
+      escapeHtml(order.lastName) + '<br>' +
+      '<b>Contacto:</b> ' + escapeHtml(order.phone) + '<br>' +
+      '<b>Realizado:</b> ' + escapeHtml(order.createdDate) + ' · ' +
+      escapeHtml(order.createdTime) + '<br>' +
+      '<b>Recogida:</b> ' + escapeHtml(order.pickupDate) + '</p>' +
+      '<h3>Donas solicitadas</h3><ul>' + items + '</ul>' +
+      '<h3>Total: $' + escapeHtml(order.total) + ' pesos</h3>';
+  }
+
+  const button = byId('makeOrder');
+  if (!button) {
+    console.error('No encuentro el botón makeOrder en la página.');
+    return;
+  }
+
+  button.addEventListener('click', function () {
+    const firstName = byId('firstName').value.trim();
+    const lastName = byId('lastName').value.trim();
+    const phone = byId('phone').value.trim();
+    const pickup = byId('pickup').value;
+
+    if (!firstName || !lastName || !phone || !pickup) {
+      alert('Completa tu nombre, apellido, teléfono y fecha de recogida.');
+      return;
+    }
+
+    const pickupDate = new Date(pickup + 'T12:00:00');
+    const weekday = pickupDate.getDay();
+
+    if (weekday === 0 || weekday === 1) {
+      alert('Los pedidos solo se recogen de martes a sábado.');
+      return;
+    }
+
+    const items = [];
+    let total = 0;
+
+    document.querySelectorAll('.qty').forEach(function (input) {
+      const quantity = Number(input.value) || 0;
+      if (quantity <= 0) return;
+
+      const index = Number(input.dataset.i ?? input.dataset.index);
+      const flavor = data.flavors[index];
+      if (!flavor) return;
+
+      items.push({
+        name: flavor.name,
+        quantity: quantity,
+        unitPrice: Number(flavor.price)
+      });
+      total += quantity * Number(flavor.price);
+    });
+
+    if (items.length === 0) {
+      alert('Selecciona al menos una dona.');
+      return;
+    }
+
+    const now = new Date();
+    const order = {
+      id: 'DZ-' + now.getTime().toString().slice(-8),
+      createdDate: now.toLocaleDateString('es-MX'),
+      createdTime: now.toLocaleTimeString('es-MX', {
+        hour: '2-digit',
+        minute: '2-digit'
+      }),
+      firstName: firstName,
+      lastName: lastName,
+      phone: phone,
+      pickupDate: pickupDate.toLocaleDateString('es-MX', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+      }),
+      items: items,
+      total: total
+    };
+
+    const pageUrl = new URL(location.href);
+    pageUrl.search = '';
+    pageUrl.hash = '';
+    pageUrl.searchParams.set('pedido', encodeOrder(order));
+
+    const qrImageUrl =
+      'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=' +
+      encodeURIComponent(pageUrl.toString());
+
+    const receipt = byId('receipt');
+    receipt.innerHTML =
+      '<h3>DAZZLE · RECIBO DE PEDIDO</h3>' +
+      '<b>Pedido:</b> ' + escapeHtml(order.id) + '<br>' +
+      '<b>Cliente:</b> ' + escapeHtml(firstName) + ' ' + escapeHtml(lastName) + '<br>' +
+      '<b>Contacto:</b> ' + escapeHtml(phone) + '<br>' +
+      '<b>Realizado:</b> ' + escapeHtml(order.createdDate) + ' · ' +
+      escapeHtml(order.createdTime) + '<br>' +
+      '<b>Recogida:</b> ' + escapeHtml(order.pickupDate) +
+      '<ul>' + items.map(function (item) {
+        return '<li>' + escapeHtml(item.quantity) + ' × ' +
+          escapeHtml(item.name) + ' — $' +
+          escapeHtml(item.quantity * item.unitPrice) + '</li>';
+      }).join('') + '</ul>' +
+      '<b>Total: $' + escapeHtml(total) + ' pesos</b>' +
+      '<img class="qr" src="' + qrImageUrl + '" alt="QR exclusivo del pedido">';
+
+    receipt.style.display = 'block';
+    showLinkedOrder();
+  });
+
+  showLinkedOrder();
+})();
+
 </script>
 </body>
 </html>
